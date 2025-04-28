@@ -2,19 +2,20 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'yashkrp/pizza-paradise'  // Update with your Docker Hub username and repository name
-        DOCKER_TAG = 'latest'
-        REGISTRY = 'docker.io'  // Docker Hub registry (can be changed for private registries)
+        DOCKER_IMAGE = 'yashkrp/pizza-paradise'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clone repository') {
             steps {
-                // Checkout code from GitHub repository
-                git branch: 'main', url: 'https://github.com/ypanjwani/pizza-paradise.git'  // Replace with your repository URL
+                script {
+                    // Disable SSL verification temporarily for Git
+                    sh 'git config --global http.sslVerify false'
+                }
+                git branch: 'main', url: 'https://github.com/ypanjwani/pizza-paradise.git'
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
                 script {
@@ -24,39 +25,25 @@ pipeline {
                 }
             }
         }
-        
-        stage('Run Tests') {
-            steps {
-                script {
-                    // Run tests (if any tests are implemented in your project)
-                    echo "Running tests..."
-                    // Example: Run unit tests, integration tests, etc. before Docker build
-                    // sh 'pytest tests/'  // Uncomment if you have a test suite
-                }
-            }
-        }
 
-        stage('Push to Docker Hub') {
+        stage('Push Docker Image to DockerHub') {
             steps {
-                script {
-                    // Log in to Docker Hub (if necessary) and push the image
-                    echo "Pushing Docker image to Docker Hub..."
-                    withCredentials([usernamePassword(credentialsId: 'dockerCred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
-                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
-                        sh 'docker push ${DOCKER_IMAGE}:${DOCKER_TAG}'
+                withDockerRegistry([credentialsId: 'dockerCred', url: '']) {
+                    script {
+                        docker.image("${DOCKER_IMAGE}").push('latest')
                     }
                 }
             }
         }
 
-        stage('Deploy Application') {
+        stage('Deploy Container') {
             steps {
                 script {
-                    // Deploy the application to a container or cloud (e.g., AWS, Azure, etc.)
-                    echo "Deploying Docker container..."
-                    // Example: Run Docker container or deploy to a cloud service
-                    // sh 'docker run -d -p 5000:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}'  // Uncomment if you want to deploy locally
-                    // Or use cloud-specific deployment commands here
+                    sh """
+                        docker stop pizza-frontend-container || true
+                        docker rm pizza-frontend-container || true
+                        docker run -d --name pizza-frontend-container -p 5000:80 ${DOCKER_IMAGE}:latest
+                    """
                 }
             }
         }
@@ -64,18 +51,7 @@ pipeline {
 
     post {
         always {
-            // Cleanup (if any cleanup is needed)
-            echo "Cleaning up..."
-            // Example: Clean up Docker containers or images after use
-            sh 'docker system prune -f'
-        }
-        
-        success {
-            echo "Pipeline executed successfully!"
-        }
-        
-        failure {
-            echo "Pipeline failed. Investigate the logs for more details."
+            echo 'Pipeline finished!'
         }
     }
 }
