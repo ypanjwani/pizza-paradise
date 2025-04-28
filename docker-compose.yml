@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  pizza-frontend:
+    build: .
+    ports:
+      - "5000:80"
+    container_name: pizza-frontend-container
