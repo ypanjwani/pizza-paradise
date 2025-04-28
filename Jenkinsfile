@@ -8,7 +8,11 @@ pipeline {
     stages {
         stage('Clone repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/ypanjwani/pizza-paradise.git', credentialsId: 'github-credentials'
+                script {
+                    // Disable SSL verification temporarily for Git
+                    sh 'git config --global http.sslVerify false'
+                }
+                git branch: 'main', url: 'https://github.com/ypanjwani/pizza-paradise.git'
             }
         }
 
@@ -34,8 +38,8 @@ pipeline {
             steps {
                 script {
                     sh """
-                        docker stop pizza-frontend-container || echo 'No existing container to stop'
-                        docker rm pizza-frontend-container || echo 'No existing container to remove'
+                        docker stop pizza-frontend-container || true
+                        docker rm pizza-frontend-container || true
                         docker run -d --name pizza-frontend-container -p 5000:80 ${DOCKER_IMAGE}:latest
                     """
                 }
