@@ -19,7 +19,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}")
+                    // Build Docker image with --insecure-registry flag to bypass SSL verification
+                    sh """
+                        docker --insecure-registry registry-1.docker.io build -t ${DOCKER_IMAGE} .
+                    """
                 }
             }
         }
