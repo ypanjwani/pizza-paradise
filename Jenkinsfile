@@ -2,49 +2,61 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'yashkrp/pizza-website'
+        DOCKER_IMAGE = 'yashkrp/pizza-paradise'  // Update with your Docker Hub username and repository name
+        DOCKER_TAG = 'latest'
+        REGISTRY = 'docker.io'  // Docker Hub registry (can be changed for private registries)
     }
 
     stages {
-        stage('Clone repository') {
+        stage('Checkout') {
             steps {
-                script {
-                    // Disable SSL verification temporarily for Git
-                    sh 'git config --global http.sslVerify false'
-                }
-                git branch: 'main', url: 'https://github.com/ypanjwani/pizza-paradise.git'
+                // Checkout code from GitHub repository
+                git branch: 'main', url: 'https://github.com/ypanjwani/pizza-paradise.git'  // Replace with your repository URL
             }
         }
-
+        
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build Docker image with --insecure-registry flag to bypass SSL verification
-                    sh """
-                        docker --insecure-registry registry-1.docker.io build -t ${DOCKER_IMAGE} .
-                    """
+                    // Build Docker image
+                    echo "Building Docker image..."
+                    sh 'docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .'
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Run tests (if any tests are implemented in your project)
+                    echo "Running tests..."
+                    // Example: Run unit tests, integration tests, etc. before Docker build
+                    // sh 'pytest tests/'  // Uncomment if you have a test suite
                 }
             }
         }
 
-        stage('Push Docker Image to DockerHub') {
+        stage('Push to Docker Hub') {
             steps {
-                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
-                    script {
-                        docker.image("${DOCKER_IMAGE}").push('latest')
+                script {
+                    // Log in to Docker Hub (if necessary) and push the image
+                    echo "Pushing Docker image to Docker Hub..."
+                    withCredentials([usernamePassword(credentialsId: 'dockerCred', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin'
+                        sh 'docker push ${DOCKER_IMAGE}:${DOCKER_TAG}'
                     }
                 }
             }
         }
 
-        stage('Deploy Container') {
+        stage('Deploy Application') {
             steps {
                 script {
-                    sh """
-                        docker stop pizza-frontend-container || true
-                        docker rm pizza-frontend-container || true
-                        docker run -d --name pizza-frontend-container -p 5000:80 ${DOCKER_IMAGE}:latest
-                    """
+                    // Deploy the application to a container or cloud (e.g., AWS, Azure, etc.)
+                    echo "Deploying Docker container..."
+                    // Example: Run Docker container or deploy to a cloud service
+                    // sh 'docker run -d -p 5000:5000 ${DOCKER_IMAGE}:${DOCKER_TAG}'  // Uncomment if you want to deploy locally
+                    // Or use cloud-specific deployment commands here
                 }
             }
         }
@@ -52,7 +64,18 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline finished!'
+            // Cleanup (if any cleanup is needed)
+            echo "Cleaning up..."
+            // Example: Clean up Docker containers or images after use
+            sh 'docker system prune -f'
+        }
+        
+        success {
+            echo "Pipeline executed successfully!"
+        }
+        
+        failure {
+            echo "Pipeline failed. Investigate the logs for more details."
         }
     }
 }
