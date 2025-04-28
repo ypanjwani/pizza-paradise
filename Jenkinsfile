@@ -21,7 +21,7 @@ pipeline {
                 script {
                     // Build Docker image
                     echo "Building Docker image..."
-                    sh 'docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .'
+                    sh 'docker build -t ${DOCKER_IMAGE}:latest .'
                 }
             }
         }
